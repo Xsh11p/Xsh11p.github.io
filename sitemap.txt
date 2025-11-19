@@ -1,9 +1,9 @@
+http://example.com/about/index.html
 http://example.com/2025/11/19/%E5%AE%9E%E6%88%98%E6%89%93%E7%82%B9%E6%A1%88%E4%BE%8B%E5%88%86%E4%BA%AB/
 http://example.com/2025/11/17/%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81Ecshop%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/
 http://example.com/2025/03/27/IngressNightmare%E5%A4%8D%E7%8E%B0/
 http://example.com/2025/01/01/java_sec/
 http://example.com/link/index.html
-http://example.com/about/index.html
 http://example.com/categories/index.html
 http://example.com/tags/index.html
 http://example.com/
