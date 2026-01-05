@@ -6,7 +6,7 @@
   <link href="http://example.com/atom.xml" rel="self"/>
   
   <link href="http://example.com/"/>
-  <updated>2025-11-19T15:33:53.184Z</updated>
+  <updated>2026-01-05T13:32:11.684Z</updated>
   <id>http://example.com/</id>
   
   <author>
@@ -15,6 +15,26 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>红队项目中自建代理池的一种解决方案</title>
+    <link href="http://example.com/2026/01/05/%E8%87%AA%E5%BB%BA%E4%BB%A3%E7%90%86%E6%B1%A0/"/>
+    <id>http://example.com/2026/01/05/%E8%87%AA%E5%BB%BA%E4%BB%A3%E7%90%86%E6%B1%A0/</id>
+    <published>2026-01-05T13:31:24.979Z</published>
+    <updated>2026-01-05T13:32:11.684Z</updated>
+    
+    <content type="html"><![CDATA[<p>本文思路来自于<a href="https://mp.weixin.qq.com/s/JH-IlL_GFgZp3xXeOFzZeQ">https://mp.weixin.qq.com/s/JH-IlL_GFgZp3xXeOFzZeQ</a><br>原项目地址<a href="https://github.com/wgpsec/redc-template">wgpsec&#x2F;redc-template: redc 要用到的 tf 模板</a></p><h2 id="0x01-简介"><a href="#0x01-简介" class="headerlink" title="0x01 简介"></a>0x01 简介</h2><p>红队项目中，代理池是必不可少的一项基础设施。市面上常见两种代理池方案</p><p>1.利用资产测绘平台语法去互联网上抓免费的，github上也有很多优秀的工具可以辅助<br>2.花钱购买商业版代理池</p><p>这两种方法各有利弊，抓免费的质量太差，速度上不行易丢包，而商业版的就比较好用，但是挺贵。也有一种法外狂徒方案，不停的getshell然后种木马，把肉鸡当代理用，这种方案风险太大，一不小心就得被请去喝茶。</p><p>参考了上面的文章之后之后豁然开朗，其实可以利用各种云的按量付费实例去搭建代理池，只要这个实例配置较低，其实一场攻防打下来费用也并不会太大，并且由于开启实例的时候地区可控，把机器都开在国内速度质量也是可以保证的。</p><p>这里就以阿里云场景为例，记录一下我的操作过程</p><h2 id="0x02-操作过程"><a href="#0x02-操作过程" class="headerlink" title="0x02 操作过程"></a>0x02 操作过程</h2><p>先安装terraform，参考文章</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://blog.csdn.net/tony_vip/article/details/107204882</span><br></pre></td></tr></table></figure><p>这篇文章里的版本比较低了，记得安装最新版本，不然aliyun cloud的版本不匹配，但是文章里的安装步骤可以参考<br>给terraform换国内源</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://help.aliyun.com/zh/terraform/terraform-init-acceleration-solution-configuration</span><br></pre></td></tr></table></figure><p>配置cloudefare R2，这是个免费的云存储，有10G存储空间，对于个人来说，放一些小工具也够用了</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://senjianlu.com/posts/articles/ops/linux-rclone-cloudflare-r2/</span><br></pre></td></tr></table></figure><p>下载rclone，配置好R2的配置文件</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">rclone config file   # 这条命令可以看到配置文件所在位置</span><br><span class="line"></span><br><span class="line"># 然后编辑这个配置文件，配置R2，格式如下</span><br><span class="line"></span><br><span class="line">[r2]</span><br><span class="line">type = s3</span><br><span class="line">provider = Cloudflare</span><br><span class="line"># 访问密钥 ID</span><br><span class="line">access_key_id = xxxxxxxxxxxxx</span><br><span class="line"># 机密访问密钥</span><br><span class="line">secret_access_key = xxxxxxxxxxxxxxxxxxxxxxxxxxx</span><br><span class="line"># 管辖权的终结点</span><br><span class="line">endpoint = https://xxxxxxxxxxxxxxxxxxx.r2.cloudflarestorage.com</span><br><span class="line">acl = private</span><br></pre></td></tr></table></figure><p>下载aliyun cli ，配置好AK，SK，这里你的阿里云账户里需要余额大于200（阿里云规定的，算是保证金吧）</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://help.aliyun.com/zh/cli/install-cli-on-linux</span><br></pre></td></tr></table></figure><p>下载redc-template项目 解压, 因为这里我们重点关注代理池场景，所以我直接cd到proxy目录，如果要启动其它场景，应该也是类似的</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cd redc-template-master/aliyun/aliyun-proxy</span><br><span class="line">chmod +x ./deploy.sh</span><br><span class="line">./deploy.sh -init</span><br><span class="line">./deploy.sh -start 10  #这里可以选择效果</span><br></pre></td></tr></table></figure><p>正常这样操作之后，会在当前目录下生成一个yaml配置文件，如果是多人合作，也可以让别人从R2上下载</p><p><img src="/imgs/img/image-20260105205220545.png" alt="image-20260105205220545"></p><p>将这个yaml文件导入clash，就可以正常使用了</p><p><img src="/imgs/img/image-20260105205644301.png" alt="image-20260105205644301"></p><h2 id="0x03-效果测试"><a href="#0x03-效果测试" class="headerlink" title="0x03 效果测试"></a>0x03 效果测试</h2><p>效果测试</p><p><img src="/imgs/img/image-20260105205748628.png" alt="image-20260105205748628"></p><p>10台机器都开在BJ区域</p><p><img src="/imgs/img/image-20260105205507621.png" alt="image-20260105205507621"></p><p>延迟很低，几乎很难感受到</p><p><img src="/imgs/img/image-20260105205909157.png" alt="image-20260105205909157"></p><p><img src="/imgs/img/image-20260105210000507.png" alt="image-20260105210000507"></p><p>打开代理，配置文件里设置了轮询代理，也就是不同的请求会切换不同的ip，至此已经基本实现了一个10台机器的代理池效果, 接下来就可以直接开打了</p><p>费用方面，10台机器开了一个小时，不到两毛<br><img src="/imgs/img/image-20260105210412451.png" alt="image-20260105210412451"></p><p>但是考虑到这里其实只是开着机器，没进行什么操作，所以没什么流量费用，但是流量是1G8毛，也可以大致估算一下。</p><h2 id="0x04-扩展"><a href="#0x04-扩展" class="headerlink" title="0x04 扩展"></a>0x04 扩展</h2><p>这里是固定的10台机器，可以定时切换机器，达到代理池清洗的效果</p><p>让我们细想一下，这其实是一种云原生思路：文件用对象存储、数据存云数据库、服务器就只提供算力和服务，平时维护好资源编排脚本，实现随时部署随时销毁、用完即弃，这样相当于把服务器的基础设施变成了服务，也就是常提起的iaas概念</p><p>这个思路还有很多场景可以实现，文章中有提到，比如搭建一个扫描集群，搞一台固定的实例做 master，抢占式实例做 worker，启动实例时从存储桶里拉去worker可执行文件，运行注册woker，worker从消息队列里取任务，扫描结果放在存储里，机器销毁了就再加机器进集群就行了，有点类似于K8s哈，不过我觉得是可以实现的。</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;本文思路来自于&lt;a href=&quot;https://mp.weixin.qq.com/s/JH-IlL_GFgZp3xXeOFzZeQ&quot;&gt;https://mp.weixin.qq.com/s/JH-IlL_GFgZp3xXeOFzZeQ&lt;/a&gt;&lt;br&gt;原项目地址&lt;a href=</summary>
+      
+    
+    
+    
+    
+  </entry>
   
   <entry>
     <title>实战打点案例分享</title>
